@@ -14,26 +14,11 @@ def load_attendance_data():
 def save_attendance_data(df):
     df.to_csv("attendance_sheet.csv", index=False)
 
-# Function to reset the attendance data
-def reset_attendance_data():
-    if os.path.exists("attendance_sheet.csv"):
-        os.remove("attendance_sheet.csv")
-    return pd.DataFrame(columns=["DATE", "NAME OF AGENT", "POSITION", "STATUS", "TYPE OF ABSENT", "TIME", "OT TIME"])
-
 # Streamlit UI
 st.title("SBC INSURANCE ATTENDANCE")
 
-# Button to reset the data
-reset_button = st.button("Reset")
-
-# Reset the data if button is pressed
-if reset_button:
-    attendance_df = reset_attendance_data()
-    st.success("Attendance data has been reset!")
-
-else:
-    # Load existing attendance data if available
-    attendance_df = load_attendance_data()
+# Load existing attendance data if available
+attendance_df = load_attendance_data()
 
 # Get today's date using datetime module
 today_date = datetime.today().date()
@@ -72,15 +57,32 @@ with st.form(key="attendance_form"):
 
             st.success("Attendance has been recorded successfully!")
 
-# Display the updated attendance sheet
+# Display the full attendance sheet (no filtering applied)
 st.subheader("Attendance Sheet")
+
+# Reset the index to avoid out-of-bounds errors
+attendance_df = attendance_df.reset_index(drop=True)
+
+# Option to delete a row
+rows_to_delete = st.multiselect("Delete Row", options=attendance_df.index.tolist(), format_func=lambda x: f"Entry {x+1}: {attendance_df.iloc[x]['NAME OF AGENT']} - {attendance_df.iloc[x]['POSITION']}")
+
+# Confirm delete button
+if rows_to_delete:
+    confirm_delete_button = st.button("Confirm Delete")
+    
+    if confirm_delete_button:
+        # Delete selected rows and reset the index
+        attendance_df = attendance_df.drop(rows_to_delete).reset_index(drop=True)
+        save_attendance_data(attendance_df)
+        st.success(f"Deleted selected entries: {', '.join(str(row + 1) for row in rows_to_delete)}")
+
+# Display the updated attendance sheet
 st.dataframe(attendance_df)
 
-file_name = f"Attendace {today_date}.csv"
-
 # Option to download the updated attendance sheet
+file_name = f"Attendance {today_date}.csv"
 st.download_button(
-    label="Download Attendace",
+    label="Download Attendance",
     data=attendance_df.to_csv(index=False),
     file_name=file_name,
     mime="text/csv",
