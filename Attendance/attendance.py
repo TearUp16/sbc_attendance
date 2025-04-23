@@ -32,7 +32,7 @@ with st.form(key="attendance_form"):
     position = st.selectbox("Position", ["Agent", "TL", "MIS", "Field"])
     status = st.selectbox("Status (Present/Absent)", ["Present", "Absent"])
     type_of_absent = st.selectbox("Type of Absence (Leave blank if none)", ["","SL", "VL", "EL"])
-    time = st.text_input("Time (8AM to 5PM)", "8AM to 5PM")
+    time = st.text_input("Time (Modify if needed)", "8AM to 5PM")
     ot_time = st.selectbox("OT Time (Leave blank if none)", ["", "1 HOUR", "2 HOURS", "3 HOURS"])
 
     # Submit button for the form
@@ -58,7 +58,7 @@ with st.form(key="attendance_form"):
             st.success("Attendance has been recorded successfully!")
 
 # Date filter to select a specific date
-date_filter = st.date_input("Select a date to filter", today_date)
+date_filter = st.date_input("Select Date", today_date)
 
 # Display the filtered attendance sheet
 st.subheader("Attendance Sheet " + str(date_filter))
@@ -86,9 +86,9 @@ if rows_to_delete:
 st.dataframe(filtered_df)
 
 # Option to download the filtered attendance sheet
-file_name = f"Filtered_Attendance_{date_filter}.csv"
+file_name = f"Attendance{date_filter}.csv"
 st.download_button(
-    label="Download Filtered Attendance",
+    label="Download Attendance",
     data=filtered_df.to_csv(index=False),
     file_name=file_name,
     mime="text/csv",
