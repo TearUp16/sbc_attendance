@@ -57,14 +57,20 @@ with st.form(key="attendance_form"):
 
             st.success("Attendance has been recorded successfully!")
 
-# Display the full attendance sheet (no filtering applied)
-st.subheader("Attendance Sheet")
+# Date filter to select a specific date
+date_filter = st.date_input("Select a date to filter", today_date)
+
+# Display the filtered attendance sheet
+st.subheader("Attendance Sheet " + str(date_filter))
+
+# Filter the attendance data based on the selected date
+filtered_df = attendance_df[attendance_df["DATE"] == str(date_filter)]
 
 # Reset the index to avoid out-of-bounds errors
-attendance_df = attendance_df.reset_index(drop=True)
+filtered_df = filtered_df.reset_index(drop=True)
 
-# Option to delete a row
-rows_to_delete = st.multiselect("Delete Row", options=attendance_df.index.tolist(), format_func=lambda x: f"Entry {x+1}: {attendance_df.iloc[x]['NAME OF AGENT']} - {attendance_df.iloc[x]['POSITION']}")
+# Option to delete a row from the filtered data
+rows_to_delete = st.multiselect("Select rows to delete", options=filtered_df.index.tolist(), format_func=lambda x: f"Entry {x+1}: {filtered_df.iloc[x]['NAME OF AGENT']} - {filtered_df.iloc[x]['POSITION']}")
 
 # Confirm delete button
 if rows_to_delete:
@@ -72,18 +78,18 @@ if rows_to_delete:
     
     if confirm_delete_button:
         # Delete selected rows and reset the index
-        attendance_df = attendance_df.drop(rows_to_delete).reset_index(drop=True)
-        save_attendance_data(attendance_df)
+        filtered_df = filtered_df.drop(rows_to_delete).reset_index(drop=True)
+        save_attendance_data(filtered_df)  # Save the updated data
         st.success(f"Deleted selected entries: {', '.join(str(row + 1) for row in rows_to_delete)}")
 
-# Display the updated attendance sheet
-st.dataframe(attendance_df)
+# Display the updated filtered attendance sheet
+st.dataframe(filtered_df)
 
-# Option to download the updated attendance sheet
-file_name = f"Attendance {today_date}.csv"
+# Option to download the filtered attendance sheet
+file_name = f"Filtered_Attendance_{date_filter}.csv"
 st.download_button(
-    label="Download Attendance",
-    data=attendance_df.to_csv(index=False),
+    label="Download Filtered Attendance",
+    data=filtered_df.to_csv(index=False),
     file_name=file_name,
     mime="text/csv",
 )
