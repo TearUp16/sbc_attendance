@@ -28,7 +28,7 @@ with st.form(key="attendance_form"):
     # Display today's date in a non-editable field (read-only)
     st.subheader(f"**Date**: {today_date}")  # Displaying today's date as text, not editable
     
-    name_of_agent = st.text_input("Name of Agent")
+    name_of_agent = st.text_input("Name")
     position = st.selectbox("Position", ["Agent", "TL", "MIS", "Field"])
     status = st.selectbox("Status (Present/Absent)", ["Present", "Absent"])
     type_of_absent = st.selectbox("Type of Absence (Leave blank if none)", ["","SL", "VL", "EL"])
