@@ -1,95 +1,150 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
+from datetime import datetime, time
 
-# Function to load existing attendance data if available
+# helper to format 24h → 12h AM/PM
+def fmt_hour(h: int) -> str:
+    if h == 0:
+        return "12:00 AM"
+    elif 1 <= h < 12:
+        return f"{h:02d}:00 AM"
+    elif h == 12:
+        return "12:00 PM"
+    else:
+        return f"{h-12:02d}:00 PM"
+
+# your fixed list of agents & positions
+names_positions = {
+    "ANDRE DENIEL PINEDA":    "MIS",
+    "JOAN VILLANUEVA":        "TL",
+    "JOANNA NICOLE AINZA":    "AGENT",
+    "NAOMI CAROLINE ASIS":    "AGENT",
+    "JONATHAN LAPAYA":        "AGENT",
+    "JECELYN LOROZO":         "AGENT",
+    "JOAN MERCADO":           "AGENT",
+    "CELSA MONTENEGRO":       "AGENT",
+    "LEVI JR. QUEROL":        "AGENT",
+    "HANS DAVID QUIJANO":     "AGENT",
+    "MIRIAM RESUELLO":        "AGENT",
+    "MARY LUZBHEL ROYOL":     "AGENT",
+    "KEISHA MAE SUMBANG":     "AGENT"
+}
+
 def load_attendance_data():
     if os.path.exists("attendance_sheet.csv"):
-        return pd.read_csv("attendance_sheet.csv")
+        df = pd.read_csv("attendance_sheet.csv")
+        df["DATE"] = pd.to_datetime(df["DATE"]).dt.date
+        return df
     else:
-        return pd.DataFrame(columns=["DATE", "NAME OF AGENT", "POSITION", "STATUS", "TYPE OF ABSENT", "TIME", "OT TIME"])
+        return pd.DataFrame(columns=[
+            "DATE","NAME OF AGENT","POSITION",
+            "STATUS","TYPE OF ABSENT","TIME","OT TIME"
+        ])
 
-# Function to save the attendance data to a CSV file
 def save_attendance_data(df):
     df.to_csv("attendance_sheet.csv", index=False)
 
-# Streamlit UI
 st.title("SBC INSURANCE ATTENDANCE")
-
-# Load existing attendance data if available
 attendance_df = load_attendance_data()
+today_date   = datetime.today().date()
+current_time = datetime.now().time()
 
-# Get today's date using datetime module
-today_date = datetime.today().date()
+# auto-mark absent after 9:00
+if current_time >= time(9, 0):
+    missing = [
+        name for name in names_positions
+        if not (
+            (attendance_df["DATE"] == today_date) &
+            (attendance_df["NAME OF AGENT"] == name)
+        ).any()
+    ]
+    if missing:
+        for name in missing:
+            attendance_df = pd.concat([attendance_df, pd.DataFrame({
+                "DATE":          [today_date],
+                "NAME OF AGENT": [name],
+                "POSITION":      [names_positions[name]],
+                "STATUS":        ["ABSENT"],
+                "TYPE OF ABSENT":[""],
+                "TIME":          [""],
+                "OT TIME":       [""]
+            })], ignore_index=True)
+        save_attendance_data(attendance_df)
 
-# User input form for attendance
 with st.form(key="attendance_form"):
-    # Display today's date in a non-editable field (read-only)
-    st.subheader(f"**Date**: {today_date}")  # Displaying today's date as text, not editable
-    
-    name_of_agent = st.text_input("Name")
-    position = st.selectbox("Position", ["Agent", "TL", "MIS", "Field"])
-    status = st.selectbox("Status (Present/Absent)", ["Present", "Absent"])
-    type_of_absent = st.selectbox("Type of Absence (Leave blank if none)", ["","SL", "VL", "EL"])
-    time = st.text_input("Time (Modify if needed)", "8AM to 5PM")
-    ot_time = st.selectbox("OT Time (Leave blank if none)", ["", "1 HOUR", "2 HOURS", "3 HOURS"])
+    st.subheader(f"**Date**: {today_date}")
 
-    # Submit button for the form
+    # 1) Name dropdown
+    name_of_agent = st.selectbox("Name", list(names_positions.keys()))
+
+    # 2) Editable Position dropdown (defaults to the mapped role)
+    pos_options = ["AGENT", "TL", "MIS", "FIELD"]
+    default_idx = pos_options.index(names_positions[name_of_agent])
+    position    = st.selectbox("Position", pos_options, index=default_idx)
+
+    status         = st.selectbox("Status (Present/Absent)", ["PRESENT", "ABSENT"]).upper()
+    type_of_absent = st.selectbox("Type of Absence (Leave blank if none)", ["", "SL", "VL", "EL"]).upper()
+
+    start_h = st.slider("Time in",  0, 24,  8, format="%02d:00")
+    end_h   = st.slider("Time out", start_h, 24, 17, format="%02d:00")
+    time_str = f"{fmt_hour(start_h)} – {fmt_hour(end_h)}"
+
+    ot_time = st.selectbox("OT Time (Leave blank if none)", ["", "1 HOUR", "2 HOURS", "3 HOURS"]).upper()
+
     submit_button = st.form_submit_button("Submit")
-
     if submit_button:
-        if name_of_agent:
-            new_entry = pd.DataFrame({
-                "DATE": [today_date],  # Automatically set the date to today
-                "NAME OF AGENT": [name_of_agent],
-                "POSITION": [position],
-                "STATUS": [status],
-                "TYPE OF ABSENT": [type_of_absent],
-                "TIME": [time],
-                "OT TIME": [ot_time]
-            })
-            # Append the new entry to the existing data
-            attendance_df = pd.concat([attendance_df, new_entry], ignore_index=True)
+        # remove any auto-ABSENT row for this agent today
+        attendance_df = attendance_df[~(
+            (attendance_df["DATE"] == today_date) &
+            (attendance_df["NAME OF AGENT"] == name_of_agent)
+        )]
+        # add their real submission
+        new_entry = pd.DataFrame({
+            "DATE":          [today_date],
+            "NAME OF AGENT": [name_of_agent],
+            "POSITION":      [position],
+            "STATUS":        [status],
+            "TYPE OF ABSENT":[type_of_absent],
+            "TIME":          [time_str],
+            "OT TIME":       [ot_time]
+        })
+        attendance_df = pd.concat([attendance_df, new_entry], ignore_index=True)
+        save_attendance_data(attendance_df)
+        st.success("Attendance has been recorded successfully!")
 
-            # Save updated attendance data to CSV
-            save_attendance_data(attendance_df)
-
-            st.success("Attendance has been recorded successfully!")
-
-# Date filter to select a specific date
-date_filter = st.date_input("Select Date", today_date)
-
-# Display the filtered attendance sheet
+# ─── Date Filter & Display ────────────────────────────────────────────────
+date_filter = st.date_input("Select a date to filter", today_date)
 st.subheader("Attendance Sheet " + str(date_filter))
 
-# Filter the attendance data based on the selected date
-filtered_df = attendance_df[attendance_df["DATE"] == str(date_filter)]
+filtered_df = attendance_df[
+    attendance_df["DATE"] == date_filter
+].reset_index(drop=True)
 
-# Reset the index to avoid out-of-bounds errors
-filtered_df = filtered_df.reset_index(drop=True)
+# Delete option
+rows_to_delete = st.multiselect(
+    "Select rows to delete",
+    options=filtered_df.index.tolist(),
+    format_func=lambda x: (
+        f"Entry {x+1}: {filtered_df.iloc[x]['NAME OF AGENT']} - "
+        f"{filtered_df.iloc[x]['POSITION']}"
+    )
+)
+if rows_to_delete and st.button("Confirm Delete"):
+    filtered_df = filtered_df.drop(rows_to_delete).reset_index(drop=True)
+    save_attendance_data(filtered_df)
+    st.success(
+        f"Deleted selected entries: {', '.join(str(r+1) for r in rows_to_delete)}"
+    )
 
-# Option to delete a row from the filtered data
-rows_to_delete = st.multiselect("Select rows to delete", options=filtered_df.index.tolist(), format_func=lambda x: f"Entry {x+1}: {filtered_df.iloc[x]['NAME OF AGENT']} - {filtered_df.iloc[x]['POSITION']}")
-
-# Confirm delete button
-if rows_to_delete:
-    confirm_delete_button = st.button("Confirm Delete")
-    
-    if confirm_delete_button:
-        # Delete selected rows and reset the index
-        filtered_df = filtered_df.drop(rows_to_delete).reset_index(drop=True)
-        save_attendance_data(filtered_df)  # Save the updated data
-        st.success(f"Deleted selected entries: {', '.join(str(row + 1) for row in rows_to_delete)}")
-
-# Display the updated filtered attendance sheet
 st.dataframe(filtered_df)
 
-# Option to download the filtered attendance sheet
-file_name = f"Attendance{date_filter}.csv"
+# Download button
+file_name = f"Filtered_Attendance_{date_filter}.csv"
 st.download_button(
     label="Download Attendance",
     data=filtered_df.to_csv(index=False),
     file_name=file_name,
     mime="text/csv",
 )
+
