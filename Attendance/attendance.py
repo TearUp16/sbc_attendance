@@ -28,7 +28,9 @@ names_positions = {
     "HANS DAVID QUIJANO":     "AGENT",
     "MIRIAM RESUELLO":        "AGENT",
     "MARY LUZBHEL ROYOL":     "AGENT",
-    "KEISHA MAE SUMBANG":     "AGENT"
+    "KEISHA MAE SUMBANG":     "AGENT",
+    "CHYNNE JASMINE LANUZO":    "AGENT",
+    "JAYVEE MACAHIA":   "AGENT"
 }
 
 def load_attendance_data():
