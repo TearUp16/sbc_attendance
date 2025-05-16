@@ -3,7 +3,6 @@ import pandas as pd
 import os
 from datetime import datetime, time
 
-# helper to format 24h → 12h AM/PM
 def fmt_hour(h: int) -> str:
     if h == 0:
         return "12:00 AM"
@@ -14,9 +13,8 @@ def fmt_hour(h: int) -> str:
     else:
         return f"{h-12:02d}:00 PM"
 
-# your fixed list of agents & positions
 names_positions = {
-    "ANDRE DENIEL PINEDA":    "MIS",
+    "HANNAH DALUDADO":    "MIS",
     "JOAN VILLANUEVA":        "TL",
     "JOANNA NICOLE AINZA":    "AGENT",
     "NAOMI CAROLINE ASIS":    "AGENT",
